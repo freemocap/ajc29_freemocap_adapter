@@ -13,6 +13,7 @@ from ajc27_freemocap_blender_addon.freemocap_data_handler.utilities.load_data im
 
 from .create_video.create_video import create_video
 from .export_3d_model.export_3d_model import export_3d_model
+from .add_capture_cameras.add_capture_cameras import add_capture_cameras
 from .empties.creation.create_freemocap_empties import create_freemocap_empties
 from .meshes.center_of_mass.center_of_mass_mesh import create_center_of_mass_mesh
 from .meshes.center_of_mass.center_of_mass_trails import create_center_of_mass_trails
@@ -358,6 +359,17 @@ class MainController:
             print(f"Failed to export 3D model: {e}")
             print(e)
             raise e
+        
+    def add_capture_cameras(self):
+        print("Adding capture cameras...")
+        try:
+            add_capture_cameras(
+                recording_folder=self.recording_path,
+            )
+        except Exception as e:
+            print(f"Failed to add capture cameras: {e}")
+            print(e)
+            raise e
 
     def save_blender_file(self):
         print("Saving blender file...")
@@ -388,7 +400,8 @@ class MainController:
         self.add_videos()
         self.setup_scene()
         # self.create_video()
-        self.export_3d_model()
+        # self.export_3d_model()
+        self.add_capture_cameras()
         self.save_blender_file()
         
 
