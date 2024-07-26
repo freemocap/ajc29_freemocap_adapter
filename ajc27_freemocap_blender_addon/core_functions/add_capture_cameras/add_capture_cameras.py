@@ -2,12 +2,21 @@ import bpy
 import toml
 import os
 import math
-from mathutils import Vector
+from mathutils import Vector, Matrix, Euler
 
 def add_capture_cameras(
     recording_folder: str='',
+    skeleton_transform: dict={},
 ) -> None:
     calibration_file_path = None
+
+    print('Skeleton transform:', skeleton_transform)
+    print('Translation Vector:', skeleton_transform['center_reference_point'].tolist())
+    print('Rotation Matrix:', skeleton_transform['rotation_matrix'].tolist())
+    print('Rotation Matrix row1:', skeleton_transform['rotation_matrix'].tolist()[0])
+    print('Rotation Matrix row2:', skeleton_transform['rotation_matrix'].tolist()[1])
+    print('Rotation Matrix row3:', skeleton_transform['rotation_matrix'].tolist()[2])
+
 
     # Find the calibration file in the recording folder
     for file in os.listdir(recording_folder):
@@ -53,41 +62,65 @@ def add_capture_cameras(
     bpy.context.scene.render.resolution_y = cameras_dict['cam_0']['size'][1]
 
     # Get camera zero translation and rotation
-    camera_zero_translation = Vector([-2.53, -5.47, 1.13])
-    camera_zero_rotation = Vector([math.radians(85.099),
-                                   math.radians(2.1712),
-                                   math.radians(-32.809)]) #29
+    camera_0_translation = Vector([
+        skeleton_transform['center_reference_point'][0] * -1,
+        skeleton_transform['center_reference_point'][1] * -1,
+        skeleton_transform['center_reference_point'][2] * -1,
+    ])
+    camera_0_rotation_matrix = Matrix(skeleton_transform['rotation_matrix'].tolist())
+
+    camera_0_rotation = Vector([
+        -cameras_dict['cam_0']['rotation'][0],
+        -cameras_dict['cam_0']['rotation'][1],
+        -cameras_dict['cam_0']['rotation'][2],
+    ])
 
     # Add the cameras to the scene
     for key in cameras_dict.keys():
         if key == 'cam_0':
             bpy.ops.object.camera_add(
-                location = camera_zero_translation,                 
-                rotation = camera_zero_rotation
-                           + Vector([
-                                cameras_dict[key]['rotation'][0],
-                                cameras_dict[key]['rotation'][1],
-                                cameras_dict[key]['rotation'][2],
-                           ])
+                location=camera_0_translation,                 
+                rotation=camera_0_rotation
             )
+            cam_0_world_matrix = bpy.context.object.matrix_world
         else:
-            bpy.ops.object.camera_add(
-                location = camera_zero_translation
-                           + Vector([
-                                cameras_dict[key]['translation'][0] / 1000 * -1,
-                                cameras_dict[key]['translation'][1] / 1000,
-                                cameras_dict[key]['translation'][2] / 1000,
-                            ]),
-                rotation = camera_zero_rotation
-                           + Vector([
-                                cameras_dict[key]['rotation'][0],
-                                cameras_dict[key]['rotation'][1],
-                                cameras_dict[key]['rotation'][2],
-                           ])
+            # Get the relative location and rotation of the camera
+            # camera_relative_location = (
+            #     cameras_dict[key]['translation'][0] / 1000 * -1,
+            #     cameras_dict[key]['translation'][1] / 1000,
+            #     cameras_dict[key]['translation'][2] / 1000,
+            # )
+            camera_relative_location = (
+                cameras_dict[key]['translation'][0] / 1000 * -1,
+                cameras_dict[key]['translation'][1] / 1000 * -1,
+                cameras_dict[key]['translation'][2] / 1000,
             )
+            print('camera_relative_location:', camera_relative_location)
+            camera_relative_rotation = (
+                cameras_dict[key]['rotation'][0],
+                cameras_dict[key]['rotation'][1],
+                cameras_dict[key]['rotation'][2],
+            )
+            
+            camera_rotation_matrix = Euler(camera_relative_rotation, 'XYZ').to_matrix().to_4x4()
+
+            # Calculate the world matrix of the camera based on cam_0
+            camera_world_matrix = (
+                cam_0_world_matrix
+                @ Matrix.Translation(camera_relative_location)
+                @ camera_rotation_matrix
+            )
+            
+            bpy.ops.object.camera_add()
+            bpy.context.object.location = camera_world_matrix.translation
+            # bpy.context.object.rotation_euler = camera_world_matrix.to_euler()
 
         # Set the name of the camera
         bpy.context.object.name = key
+        # Show the name in the viewport
+        bpy.context.object.show_name = True
+        # Change the camera focal length
+        bpy.context.object.data.lens = 25
         # Parent the camera to the cameras parent
         bpy.context.object.parent = cameras_parent
 

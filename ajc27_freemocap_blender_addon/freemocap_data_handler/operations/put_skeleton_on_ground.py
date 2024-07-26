@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from ..handler import FreemocapDataHandler
 
 
-def put_skeleton_on_ground(handler: 'FreemocapDataHandler'):
+def put_skeleton_on_ground(handler: 'FreemocapDataHandler') -> dict:
     print(f"Putting freemocap data in inertial reference frame...")
 
     ground_reference_trajectories_with_error = handler.get_trajectories(
@@ -75,6 +75,14 @@ def put_skeleton_on_ground(handler: 'FreemocapDataHandler'):
 
     print(
         "Finished putting freemocap data in inertial reference frame.\n freemocap_data(after):\n{handler}")
+    
+    # Return the center reference point and the rotation matrix
+    skeleton_transform = {
+        "center_reference_point": center_reference_point,
+        "rotation_matrix": rotation_matrix
+    }
+
+    return skeleton_transform
 
 
 def get_body_trajectories_closest_to_the_ground(handler: 'FreemocapDataHandler') -> Dict[str, np.ndarray]:

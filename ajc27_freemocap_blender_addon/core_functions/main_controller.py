@@ -139,16 +139,18 @@ class MainController:
             print(e)
             raise e
 
-    def put_data_in_inertial_reference_frame(self):
+    def put_data_in_inertial_reference_frame(self) -> dict:
         try:
             print("Putting freemocap data in inertial reference frame....")
-            put_skeleton_on_ground(handler=self.freemocap_data_handler)
+            skeleton_transform = put_skeleton_on_ground(handler=self.freemocap_data_handler)
         except Exception as e:
             print(
                 f"Failed when trying to put freemocap data in inertial reference frame: {e}"
             )
             print(traceback.format_exc())
             raise e
+        
+        return skeleton_transform
 
     def enforce_rigid_bones(self):
         print("Enforcing rigid bones...")
@@ -360,11 +362,12 @@ class MainController:
             print(e)
             raise e
         
-    def add_capture_cameras(self):
+    def add_capture_cameras(self, skeleton_transform: dict):
         print("Adding capture cameras...")
         try:
             add_capture_cameras(
                 recording_folder=self.recording_path,
+                skeleton_transform=skeleton_transform,
             )
         except Exception as e:
             print(f"Failed to add capture cameras: {e}")
@@ -384,7 +387,7 @@ class MainController:
         #Pure python stuff
         self.load_freemocap_data()
         self.calculate_virtual_trajectories()
-        self.put_data_in_inertial_reference_frame()
+        skeleton_transform = self.put_data_in_inertial_reference_frame()
         self.enforce_rigid_bones()
         self.fix_hand_data()
         self.save_data_to_disk()
@@ -401,7 +404,7 @@ class MainController:
         self.setup_scene()
         # self.create_video()
         # self.export_3d_model()
-        self.add_capture_cameras()
+        # self.add_capture_cameras(skeleton_transform)
         self.save_blender_file()
         
 
